@@ -193,17 +193,11 @@ input[readonly]{color:var(--muted)}
 <section id="view-consol" class="stack" hidden>
   <div class="panel">
     <h2>Consolidated bright &amp; weak learners</h2>
-    <div class="hint">Sign in with the department coordinator account to view faculty submissions and download consolidated reports.</div>
+    <div class="hint">No sign-in required. View faculty submissions, upload multiple marks files, and download consolidated reports.</div>
     <div id="c-setup" class="note" hidden></div>
-    <div id="c-login" class="grid">
-      <label>Coordinator username<input id="c-username" type="text" autocomplete="username" placeholder="Username"></label>
-      <label>Coordinator password<input id="c-password" type="password" autocomplete="current-password" placeholder="Password"></label>
-      <div class="row" style="align-self:end"><button class="btn primary" id="c-login-btn" type="button">Sign in</button></div>
-    </div>
-    <div id="c-session" class="row" hidden>
-      <span class="hint" id="c-session-label">Signed in</span>
+    <div id="c-session" class="row">
+      <span class="hint" id="c-session-label">Coordinator access is open</span>
       <button class="btn small" id="c-refresh" type="button">Refresh submissions</button>
-      <button class="btn small danger" id="c-logout" type="button">Logout</button>
     </div>
     <div id="c-msg" hidden></div>
     <div id="c-bulk-tools" class="row" style="margin-top:12px" hidden>
@@ -695,7 +689,7 @@ function showTab(w){
   const c=w==='consol';
   $('view-submit').hidden=c; $('view-consol').hidden=!c;
   $('t-submit').setAttribute('aria-selected',String(!c)); $('t-consol').setAttribute('aria-selected',String(c));
-  if(c){ $('c-setup').textContent='The department sheet is not connected yet. Check the Google Apps Script web-app URL in SHEET_URL.'; $('c-setup').hidden=sheetReady(); if(getCoordinatorToken()) { showCoordinatorSession(true,'coordinator'); cRefresh(); } }
+  if(c){ $('c-setup').textContent='The department sheet is not connected yet. Check the Google Apps Script web-app URL in SHEET_URL.'; $('c-setup').hidden=sheetReady(); cRefresh(); }
 }
 $('t-submit').onclick=()=>showTab('submit'); $('t-consol').onclick=()=>showTab('consol');
 
@@ -777,7 +771,7 @@ $('c-files').onchange=async e=>{
   }
   if(!batch.length){msg('c-msg','No files could be imported. '+errors.join(' | '),'err');return;}
   try{
-    const d=await coordinatorPost('coordImport',{token:getCoordinatorToken(),payload:JSON.stringify(batch)});
+    const d=await coordinatorPost('coordImport',{payload:JSON.stringify(batch)});
     if(!d||!d.ok)throw new Error((d&&d.error)||'The Apps Script import was not confirmed.');
     await cRefresh();
     msg('c-msg',`${d.imported} file(s) saved to Google Sheets; ${d.students} student records imported. Bright rule: ≥85%; Weak rule: <40%.${errors.length?' Skipped: '+errors.join(' | '):''}`,'ok');
@@ -810,50 +804,19 @@ function coordinatorPost(action, fields){
     document.body.appendChild(frame);document.body.appendChild(form);form.submit();
   });
 }
-function getCoordinatorToken(){try{return sessionStorage.getItem('ete-coordinator-session')||'';}catch(e){return '';}}
-function setCoordinatorToken(token){try{if(token)sessionStorage.setItem('ete-coordinator-session',token);else sessionStorage.removeItem('ete-coordinator-session');}catch(e){}}
-function showCoordinatorSession(on,username){
-  $('c-login').hidden=on; $('c-session').hidden=!on;
-  $('c-session-label').textContent=on?'Signed in as '+(username||'coordinator'):'';
-}
 async function cRefresh(){
-  const token=getCoordinatorToken();
-  if(!token){showCoordinatorSession(false);$('c-body').hidden=true;msg('c-msg','Please sign in to continue.','err');return;}
+  if(!sheetReady()){msg('c-msg','The department sheet is not connected. Check SHEET_URL.','err');return;}
   $('c-refresh').disabled=true;msg('c-msg','Loading submissions…','ok');
   try{
-    const d=await coordinatorPost('coordData',{token});
-    if(!d||!d.ok){setCoordinatorToken('');showCoordinatorSession(false);$('c-body').hidden=true;msg('c-msg',(d&&d.error)||'Your session has expired. Please sign in again.','err');return;}
+    const d=await coordinatorPost('coordData',{});
+    if(!d||!d.ok){$('c-body').hidden=true;msg('c-msg',(d&&d.error)||'Could not load submissions.','err');return;}
     C={subs:d.subs||[],students:d.students||[]};
-    showCoordinatorSession(true,d.username);
     msg('c-msg',C.subs.length?`Loaded ${C.subs.length} subject upload(s) from ${new Set(C.subs.map(s=>s.faculty)).size} faculty.`:'Connected, but no faculty has uploaded a subject yet.','ok');
     $('c-body').hidden=false;$('c-bulk-tools').hidden=false;cFill();cRender();
   }catch(e){msg('c-msg',e.message||'Could not reach the Apps Script service.','err');}
   finally{$('c-refresh').disabled=false;}
 }
-async function cLoad(){
-  if(!sheetReady()){msg('c-msg','The department sheet is not connected. Check SHEET_URL.','err');return;}
-  const username=$('c-username').value.trim(),password=$('c-password').value;
-  if(!username||!password){msg('c-msg','Enter both username and password.','err');return;}
-  $('c-login-btn').disabled=true;msg('c-msg','Signing in…','ok');
-  try{
-    const d=await coordinatorPost('coordLogin',{username,password});
-    $('c-password').value='';
-    if(!d||!d.ok){msg('c-msg',(d&&d.error)||'Sign-in failed.','err');return;}
-    setCoordinatorToken(d.token);showCoordinatorSession(true,d.username);
-    await cRefresh();
-  }catch(e){$('c-password').value='';msg('c-msg',e.message||'Could not reach the Apps Script service.','err');}
-  finally{$('c-login-btn').disabled=false;}
-}
-async function cLogout(){
-  const token=getCoordinatorToken();
-  try{if(token)await coordinatorPost('coordLogout',{token});}catch(e){}
-  setCoordinatorToken('');C={subs:[],students:[]};$('c-body').hidden=true;$('c-bulk-tools').hidden=true;showCoordinatorSession(false);
-  msg('c-msg','You have been logged out.','ok');
-}
-$('c-login-btn').onclick=cLoad;
-$('c-password').addEventListener('keydown',e=>{if(e.key==='Enter')cLoad();});
-$('c-username').addEventListener('keydown',e=>{if(e.key==='Enter')cLoad();});
-$('c-refresh').onclick=cRefresh;$('c-logout').onclick=cLogout;
+$('c-refresh').onclick=()=>cRefresh();
 ['c-ay','c-sem','c-code','c-cat'].forEach(id=>$(id).addEventListener('change',cRender));
 
 // ---- consolidated downloads
