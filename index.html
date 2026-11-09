@@ -595,7 +595,7 @@ $('f-rdate').addEventListener('input',()=>{ $('f-rdate').dataset.edited='1'; set
 $('f-faculty').addEventListener('change',()=>{try{localStorage.setItem('lc-faculty',$('f-faculty').value);}catch(e){}});
 
 // ---- Google Apps Script web-app URL used for faculty uploads and coordinator login
-const SHEET_URL='https://script.google.com/macros/s/AKfycbzYjyop-YyBlXEyJM5TDA11ZnH4cjLhAFzkwVHzuFycxLNqwuYTGtsjHFGSM6lTSVOQ/exec';
+const SHEET_URL='https://script.google.com/macros/s/AKfycbxIGNvSlxxNjXDjnZOO2W6Or-VUrPV-3O-ulvez8KiMSP5jdFjT-NmQfpNKaxslXSvs/exec';
 const capsReady=Promise.resolve();
 const downloads={save:async({filename,data})=>{
   const blob=data instanceof Blob?data:new Blob([data],{type:'text/csv'});
