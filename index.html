@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ETE Learner Categorisation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,650&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single working column — header band, step-numbered form (the steps really are a sequence), then results ledger; a second tab lists all faculty submissions. */
+:root{
+  --bg:#f5f6f4; --surface:#ffffff; --ink:#1d2421; --muted:#5b6661; --line:#d9dfdb;
+  --accent:#1f5e54; --accent-soft:#e2efec; --accent-ink:#ffffff;
+  --bright:#1d6b3a; --bright-soft:#e3f2e7; --weak:#a3461d; --weak-soft:#fbe9df; --warn:#8a6a00; --warn-soft:#fbf3d5;
+  --f-display:"Source Serif 4", Georgia, serif; --f-body:"IBM Plex Sans", system-ui, sans-serif; --f-mono:"IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121715; --surface:#1a211e; --ink:#e4ebe7; --muted:#9aa8a1; --line:#2d3833;
+  --accent:#5fb8a8; --accent-soft:#1e3632; --accent-ink:#0d1513;
+  --bright:#71cf8f; --bright-soft:#1a3324; --weak:#f09a6e; --weak-soft:#3a2219; --warn:#e7c45a; --warn-soft:#352d12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121715; --surface:#1a211e; --ink:#e4ebe7; --muted:#9aa8a1; --line:#2d3833;
+  --accent:#5fb8a8; --accent-soft:#1e3632; --accent-ink:#0d1513;
+  --bright:#71cf8f; --bright-soft:#1a3324; --weak:#f09a6e; --weak-soft:#3a2219; --warn:#e7c45a; --warn-soft:#352d12; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:16px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+h1{font-family:var(--f-display);font-weight:650;font-size:clamp(24px,4vw,32px);line-height:1.15;margin:2px 0 0;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:650;font-size:20px;margin:0;text-wrap:balance}
+h3{font-size:15px;font-weight:600;margin:0}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px}
+.tabs button{border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:6px;font:500 14px var(--f-body);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:14px}
+.stack{display:grid;gap:16px}
+.step{display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:start}
+.step>.n{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--accent);color:var(--accent);display:grid;place-items:center;font:600 13px var(--f-mono)}
+.step>div{min-width:0;display:grid;gap:10px}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+label{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
+input,select{font:400 15px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:var(--bg)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.btn{font:500 14px var(--f-body);border-radius:6px;padding:8px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn.danger{color:var(--weak);border-color:var(--weak)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hint{font-size:13px;color:var(--muted)}
+.note{font-size:13px;padding:8px 12px;border-radius:6px;background:var(--warn-soft);color:var(--warn)}
+.note.ok{background:var(--bright-soft);color:var(--bright)}
+.note.err{background:var(--weak-soft);color:var(--weak)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 13px var(--f-body);padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.stat b{display:block;font:500 20px var(--f-mono);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;background:var(--bg);position:sticky;top:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--f-mono)}
+td.usn{font-family:var(--f-mono);font-size:13px}
+tr:last-child td{border-bottom:0}
+.tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px}
+.tag.b{background:var(--bright-soft);color:var(--bright)}
+.tag.w{background:var(--weak-soft);color:var(--weak)}
+.tag.a{background:var(--warn-soft);color:var(--warn)}
+.lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.listbox{border-radius:8px;padding:12px 14px;display:grid;gap:8px;min-width:0}
+.listbox.b{background:var(--bright-soft)} .listbox.w{background:var(--weak-soft)}
+.listbox h3{display:flex;justify-content:space-between;gap:8px}
+.listbox.b h3{color:var(--bright)} .listbox.w h3{color:var(--weak)}
+.listbox ol{margin:0;padding-left:22px;display:grid;gap:2px}
+.listbox li{font-size:14px}
+.listbox li .usn{font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.rule{border-left:3px solid var(--accent);padding:8px 12px;background:var(--accent-soft);border-radius:0 6px 6px 0;font-size:14px;display:grid;gap:4px}
+.rule b{color:var(--accent)}
+.rule ul{margin:0;padding-left:18px}
+.fac{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.fac div{border:1px solid var(--line);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:14px}
+details.sub{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+details.sub summary{padding:10px 14px;cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+details.sub summary b{font-weight:600}
+details.sub .body{padding:0 14px 14px;display:grid;gap:12px}
+.auto{font:600 10.5px var(--f-body);letter-spacing:.05em;text-transform:uppercase;color:var(--bright);background:var(--bright-soft);padding:1px 6px;border-radius:3px;margin-left:4px}
+input[readonly]{color:var(--muted)}
+.example-flag{font:600 11px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);padding:2px 8px;border-radius:4px}
+@media (prefers-reduced-motion:no-preference){.btn,.chip,.tabs button{transition:background .15s,border-color .15s}}
+#view-submit[hidden],#view-consol[hidden],#c-body[hidden]{display:none}
+.subj{display:grid;gap:6px}
+.subj-h{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">Dept. of Electronics &amp; Telecommunication Engg · SIT Tumakuru · NBA</div>
+    <h1>Bright &amp; Weak Learner Identification</h1>
+  </div>
+  <div class="tabs" role="tablist">
+    <button id="t-submit" role="tab" aria-selected="true" type="button">Faculty upload</button>
+    <button id="t-consol" role="tab" aria-selected="false" type="button">Coordinator view</button>
+  </div>
+</header>
+
+<!-- ================= SUBMIT VIEW ================= -->
+<section id="view-submit" class="stack">
+  <div class="panel">
+    <div class="step"><div class="n">1</div><div>
+      <h3>Upload the marks file</h3>
+      <div class="drop" id="drop">
+        <div style="min-width:0">
+          <div>Upload the <b>Eligibility Report</b> (.xls / .xlsx) downloaded from the portal, or a CSV with columns <b>USN, Student Name, T1, Q1</b>. The PDF report is built as soon as the file is read.</div>
+          <div class="hint">Only USN, name, Test (T1) and Quiz (Q1) are read. Course code and semester are filled in from the report. Change the rule below and click “Download PDF report” to rebuild it.</div>
+        </div>
+        <div class="row">
+          <input type="file" id="f-file" accept=".xls,.xlsx,.csv" hidden>
+          <input type="file" id="f-files" accept=".xls,.xlsx,.csv" multiple hidden>
+          <button class="btn primary" id="b-pick">Choose file</button>
+          <button class="btn" id="b-pick-many" type="button">Choose multiple files</button>
+          <button class="btn" id="b-template">Get CSV template</button>
+        </div>
+      </div>
+      <div id="parse-msg" hidden></div>
+      <div class="grid">
+        <label>T1 maximum marks<input id="f-maxt" type="number" min="1" value="34"></label>
+        <label>Q1 maximum marks<input id="f-maxq" type="number" min="1" value="8"></label>
+      </div>
+    </div></div>
+
+    <div class="step" id="details-step" hidden><div class="n">2</div><div>
+      <h3>Course details <span class="hint" style="font-weight:400">— read from the uploaded report; correct anything that is wrong</span></h3>
+      <div class="grid">
+        <label><span>Faculty name <span class="auto" data-auto="faculty" hidden>from report</span></span><select id="f-faculty"><option value="">Select your name…</option></select></label>
+        <label><span>Course code <span class="auto" data-auto="code" hidden>from report</span></span><input id="f-code" placeholder="e.g. SETE10"></label>
+        <label><span>Semester <span class="auto" data-auto="sem" hidden>from report</span></span><select id="f-sem"><option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+        <label><span>Academic year <span class="auto" data-auto="ay" hidden>from report date</span></span><input id="f-ay" placeholder="e.g. 2025-26"></label>
+        <label>Programme<input id="f-prog" readonly></label>
+        <label><span>Report generated on <span class="auto" id="rdate-tag" hidden></span></span><input id="f-rdate" placeholder="dd-mm-yyyy"></label>
+        <label>Course name <span class="hint" style="font-weight:400">(optional, not in report)</span><input id="f-cname" placeholder="e.g. Optical Communication"></label>
+        <label>Section <span class="hint" style="font-weight:400">(optional, not in report)</span><input id="f-sec" placeholder="e.g. A"></label>
+      </div>
+    </div></div>
+
+    <div class="step"><div class="n">3</div><div>
+      <h3>Set the selection rule</h3>
+      <div class="grid">
+        <label>Bright students identified by<select id="f-bmode">
+          <option value="top">Top N in the class</option>
+          <option value="pct">At or above a % of maximum marks</option>
+        </select></label>
+        <label id="b-param-l">Number of bright students<input id="f-nb" type="number" min="0" step="any" value="5"></label>
+        <label>Weak students identified by<select id="f-wmode">
+          <option value="bottom">Bottom N in the class</option>
+          <option value="sd">Below class mean − k × SD</option>
+          <option value="pct">Below a % of maximum marks</option>
+        </select></label>
+        <label id="w-param-l">Number of weak students<input id="f-wp" type="number" min="0" step="any" value="5"></label>
+      </div>
+      <div class="row"><button class="btn small" id="b-preset" type="button">Use 85% / 40% rule</button><span class="hint">Bright: total ≥ 85% of maximum · Weak: total below 40% of maximum</span></div>
+      <div class="row"><span class="hint" id="chips-b-label">Quick pick for bright:</span><div class="chips" id="chips-b"></div></div>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--ink);font-weight:400"><input type="checkbox" id="f-ties" checked style="width:auto"> Include students tied with the last selected score <span class="hint">(applies to “Top N” / “Bottom N” only)</span></label>
+    </div></div>
+  </div>
+
+  <div class="panel" id="result">
+    <div class="row" style="justify-content:space-between">
+      <div class="row"><h2>Class list &amp; categorisation</h2><span class="example-flag" id="ex-flag">Example data</span></div>
+      <div class="row">
+        <button class="btn" id="b-csv">Download CSV</button>
+        <button class="btn" id="b-docx">Download Word report</button>
+        <button class="btn primary" id="b-pdf">Download PDF report</button>
+      </div>
+    </div>
+    <div id="submit-msg" hidden></div>
+    <div class="stats" id="stats"></div>
+    <div class="tbl"><table id="tbl"></table></div>
+    <div class="lists" id="lists"></div>
+    <div class="rule" id="rule"></div>
+  </div>
+</section>
+
+<!-- ================= COORDINATOR VIEW ================= -->
+<section id="view-consol" class="stack" hidden>
+  <div class="panel">
+    <h2>Consolidated bright &amp; weak learners</h2>
+    <div class="hint">Sign in with the department coordinator account to view faculty submissions and download consolidated reports.</div>
+    <div id="c-setup" class="note" hidden></div>
+    <div id="c-login" class="grid">
+      <label>Coordinator username<input id="c-username" type="text" autocomplete="username" placeholder="Username"></label>
+      <label>Coordinator password<input id="c-password" type="password" autocomplete="current-password" placeholder="Password"></label>
+      <div class="row" style="align-self:end"><button class="btn primary" id="c-login-btn" type="button">Sign in</button></div>
+    </div>
+    <div id="c-session" class="row" hidden>
+      <span class="hint" id="c-session-label">Signed in</span>
+      <button class="btn small" id="c-refresh" type="button">Refresh submissions</button>
+      <button class="btn small danger" id="c-logout" type="button">Logout</button>
+    </div>
+    <div id="c-msg" hidden></div>
+    <div id="c-bulk-tools" class="row" style="margin-top:12px" hidden>
+      <input type="file" id="c-files" accept=".xls,.xlsx,.csv" multiple hidden>
+      <button class="btn" id="c-pick-many" type="button">Upload multiple marks files</button>
+      <span class="hint">Coordinator can add several Eligibility Reports; imported files are classified using Bright ≥85% and Weak <40%.</span>
+    </div>
+  </div>
+
+  <div class="panel" id="c-body" hidden>
+    <div class="grid">
+      <label>Academic year<select id="c-ay"></select></label>
+      <label>Semester<select id="c-sem"></select></label>
+      <label>Subject<select id="c-code"></select></label>
+      <label>Show<select id="c-cat">
+        <option value="B">Bright students</option>
+        <option value="W">Weak students</option>
+        <option value="BW">Bright and weak</option>
+      </select></label>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <h3 id="c-count">Subjects uploaded</h3>
+      <div class="row">
+        <button class="btn" id="c-csv" type="button">Download CSV</button>
+        <button class="btn" id="c-docx" type="button">Download Word report</button>
+        <button class="btn primary" id="c-pdf" type="button">Download PDF report</button>
+      </div>
+    </div>
+    <div id="c-dl" hidden></div>
+    <div class="tbl"><table id="c-subs"></table></div>
+    <h3 id="c-list-h">Student list</h3>
+    <div id="c-groups" class="stack"></div>
+  </div>
+</section>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script id="core">
+/* ---------- pure logic (parsing + categorisation) ---------- */
+function toNum(v){
+  if(v===null||v===undefined) return null;
+  const s=String(v).trim();
+  if(s===''||/^(ab|a|absent|-|na|nil)$/i.test(s)) return null;
+  const n=Number(s); return isFinite(n)?n:null;
+}
+function parseRows(rows){
+  // rows: array of arrays. Returns {students, meta, warnings}
+  const meta={}, warnings=[];
+  const cellStr=c=>String(c??'').trim();
+  for(const r of rows.slice(0,8)){ for(const c of r){ const s=cellStr(c); const m=s.match(/SEMESTER\s*(\d+)/i); if(m){ meta.sem=m[1]; const pg=s.split(/-\s*SEMESTER/i)[0].replace(/[-\s]+$/,'').trim(); if(pg) meta.program=pg; } } }
+  for(const r of rows){ for(const c of r){ const s=cellStr(c); const m=s.match(/Report Generated By:\s*(.+?)\s+ON\s+(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/i);
+    if(m){ meta.facultyRaw=m[1].trim(); meta.reportDate=`${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}-${m[4]}`; meta.month=Number(m[3]); meta.year=Number(m[4]); } } }
+  if(meta.year){ const Y=meta.year, odd=meta.sem?Number(meta.sem)%2===1:meta.month>=7;
+    const start=odd?(meta.month>=7?Y:Y-1):(meta.month<=9?Y-1:Y); meta.ay=`${start}-${String(start+1).slice(-2)}`; }
+  let h=-1;
+  for(let i=0;i<Math.min(rows.length,40);i++){ if(rows[i].some(c=>/^usn$/i.test(cellStr(c)))){h=i;break;} }
+  if(h<0) throw new Error('Could not find a "USN" column heading. Use the Eligibility Report or the CSV template.');
+  const H=rows[h].map(cellStr), H2=(rows[h+1]||[]).map(cellStr);
+  const usnC=H.findIndex(c=>/^usn$/i.test(c));
+  const nameC=H.findIndex(c=>/name/i.test(c));
+  const find=(re)=>{ for(const arr of [H2,H]){ const i=arr.findIndex(c=>re.test(c)); if(i>=0) return {i,label:arr[i]}; } return null; };
+  const t=find(/^(test|t1|t-1|t 1|ia ?1|cie ?1|test ?1)\b|^test|^t1$/i);
+  const q=find(/^(quiz|q1|q-1|q 1|quiz ?1)\b|^quiz|^q1$/i);
+  if(!t) throw new Error('Could not find the Test / T1 column.');
+  if(!q) throw new Error('Could not find the Quiz / Q1 column.');
+  const mx=s=>{const m=s.match(/\((\d+(?:\.\d+)?)\)/);return m?Number(m[1]):null;};
+  meta.maxT=mx(t.label); meta.maxQ=mx(q.label);
+  for(const c of H){ if(/^[A-Z]{2,}\d{2,}[A-Z0-9]*$/.test(c) && !/^USN$/i.test(c)){ meta.code=c; break; } }
+  const students=[]; const seen=new Set();
+  for(let i=h+1;i<rows.length;i++){
+    const r=rows[i]; const usn=cellStr(r[usnC]).toUpperCase();
+    if(!usn||!/\d/.test(usn)||usn.length<5) continue;
+    if(seen.has(usn)){warnings.push('Duplicate USN '+usn+' skipped.');continue;}
+    seen.add(usn);
+    students.push({usn,name:cellStr(r[nameC>=0?nameC:usnC-1]),t1:toNum(r[t.i]),q1:toNum(r[q.i])});
+  }
+  if(!students.length) throw new Error('No student rows were found under the USN heading.');
+  return {students,meta,warnings};
+}
+function categorise(students,o){
+  // o: {maxT,maxQ,bMode ('top'|'pct'),nBright (count, or % when bMode='pct'),wMode,wParam,ties}
+  const max=o.maxT+o.maxQ;
+  const all=students.map(s=>{
+    const absent=s.t1===null&&s.q1===null;
+    const total=absent?null:(s.t1||0)+(s.q1||0);
+    return {...s,absent,partial:!absent&&(s.t1===null||s.q1===null),total,pct:absent?null:total/max*100};
+  });
+  const ranked=all.filter(s=>!s.absent).sort((a,b)=>b.total-a.total||(b.t1||0)-(a.t1||0)||a.usn.localeCompare(b.usn));
+  let prev=null,rank=0; ranked.forEach((s,i)=>{ if(s.total!==prev){rank=i+1;prev=s.total;} s.rank=rank; });
+  const n=ranked.length, sc=ranked.map(s=>s.total);
+  const mean=n?sc.reduce((a,b)=>a+b,0)/n:0;
+  const sd=n>1?Math.sqrt(sc.reduce((a,b)=>a+(b-mean)**2,0)/(n-1)):0;
+  const srt=[...sc].sort((a,b)=>a-b); const median=n?(n%2?srt[(n-1)/2]:(srt[n/2-1]+srt[n/2])/2):0;
+  const stats={n,absent:all.length-n,mean,sd,median,max:n?sc[0]:0,min:n?sc[n-1]:0,full:max};
+  const EPS=1e-9;
+  let bright=[], bCut=null, nb;
+  if(o.bMode==='pct'){
+    // Bright = total marks percentage at or above the threshold (e.g. 85% and above)
+    bCut=(o.nBright||0)/100*max;
+    bright=ranked.filter(s=>s.total>=bCut-EPS);
+    nb=bright.length;
+  }else{
+    nb=Math.max(0,Math.min(Math.floor(o.nBright||0),n));
+    if(nb>0){ bCut=ranked[nb-1].total; bright=o.ties?ranked.filter(s=>s.total>=bCut):ranked.slice(0,nb); }
+  }
+  const bSet=new Set(bright.map(s=>s.usn));
+  const pool=ranked.filter(s=>!bSet.has(s.usn));
+  let weak=[], wCut=null;
+  if(o.wMode==='bottom'){
+    const m=Math.max(0,Math.min(Math.floor(o.wParam||0),pool.length));
+    if(m>0){ const asc=[...pool].reverse(); wCut=asc[m-1].total; weak=o.ties?asc.filter(s=>s.total<=wCut):asc.slice(0,m); }
+  }else if(o.wMode==='sd'){
+    wCut=mean-(o.wParam||0)*sd; weak=[...pool].reverse().filter(s=>s.total<wCut);
+  }else{
+    // Weak = total marks percentage below the threshold (e.g. below 40%)
+    wCut=(o.wParam||0)/100*max; weak=[...pool].reverse().filter(s=>s.total<wCut-EPS);
+  }
+  const wSet=new Set(weak.map(s=>s.usn));
+  all.forEach(s=>{ s.cat=s.absent?'A':bSet.has(s.usn)?'B':wSet.has(s.usn)?'W':''; const r=ranked.find(x=>x.usn===s.usn); s.rank=r?r.rank:null; });
+  return {all,ranked,bright,weak,stats,bCut,wCut,nb};
+}
+function f1(x){return (Math.round(x*100)/100).toString();}
+function ruleLines(res,o){
+  const s=res.stats, L=[];
+  L.push(`Score = T1 (out of ${o.maxT}) + Q1 (out of ${o.maxQ}) = ${s.full} marks. ${s.n} students ranked on score, highest first; equal scores broken by higher T1, then USN.`);
+  if(o.bMode==='pct') L.push(`Bright learners: total marks at or above ${o.nBright}% of maximum = ${f1(res.bCut)} / ${s.full}. ${res.bright.length} identified.`);
+  else if(res.nb>0) L.push(`Bright learners: top ${res.nb} by rank${o.ties?' (plus any tied at the cut-off)':''} — score ≥ ${f1(res.bCut)} / ${s.full} (${f1(res.bCut/s.full*100)}%). ${res.bright.length} identified.`);
+  else L.push('Bright learners: none selected (count set to 0).');
+  if(o.wMode==='bottom') L.push(`Weak learners: bottom ${Math.floor(o.wParam||0)} of the remaining students by rank${o.ties?' (plus any tied at the cut-off)':''}${res.wCut!==null?` — score ≤ ${f1(res.wCut)} / ${s.full} (${f1(res.wCut/s.full*100)}%)`:''}. ${res.weak.length} identified.`);
+  else if(o.wMode==='sd') L.push(`Weak learners: score below class mean − ${o.wParam} × SD = ${f1(s.mean)} − ${o.wParam} × ${f1(s.sd)} = ${f1(res.wCut)} / ${s.full} (${f1(res.wCut/s.full*100)}%). ${res.weak.length} identified.`);
+  else L.push(`Weak learners: total marks below ${o.wParam}% of maximum = ${f1(res.wCut)} / ${s.full}. ${res.weak.length} identified.`);
+  L.push(`Class statistics: mean ${f1(s.mean)}, SD ${f1(s.sd)}, median ${f1(s.median)}, highest ${s.max}, lowest ${s.min}.`);
+  if(s.absent) L.push(`${s.absent} student(s) with no T1 and Q1 marks (absent) are excluded from ranking and listed separately.`);
+  return L;
+}
+function matchFaculty(raw,list){
+  if(!raw) return null;
+  const tok=s=>String(s).toUpperCase().replace(/\bDR\b\.?/g,' ').replace(/[^A-Z ]/g,' ').split(/\s+/).filter(Boolean);
+  const rt=tok(raw), rj=rt.join(''); let best=null,bs=0;
+  const has=t=>rt.includes(t)||(t.length>4&&rj.includes(t));
+  for(const f of list){ const ft=tok(f); const long=ft.filter(t=>t.length>2);
+    if(!long.every(has)) continue;
+    const sc=(ft.filter(has).length+0.01)/Math.max(ft.length,rt.length);
+    if(sc>bs){bs=sc;best=f;} }
+  return best;
+}
+function pdfSafe(s){return String(s??'').replace(/≥/g,'>=').replace(/≤/g,'<=').replace(/−/g,'-').replace(/×/g,'x').replace(/[—–]/g,'-').replace(/[“”]/g,'"').replace(/[^\x20-\x7E]/g,'');}
+function buildPdf(jsPDF,meta,res,o,lines,generatedAt){
+  const doc=new jsPDF({unit:'mm',format:'a4'}); const W=doc.internal.pageSize.getWidth(), M=14;
+  const ink=[29,36,33], acc=[31,94,84], grn=[29,107,58], org=[163,70,29], mut=[91,102,97];
+  const s=res.stats;
+  doc.setTextColor(...ink); doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.text('SIDDAGANGA INSTITUTE OF TECHNOLOGY, TUMAKURU',W/2,16,{align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
+  doc.text('Department of Electronics and Telecommunication Engineering',W/2,22,{align:'center'});
+  doc.setFont('helvetica','bold'); doc.setFontSize(12.5); doc.setTextColor(...acc);
+  doc.text('Identification of Bright and Weak Learners (based on T1 and Q1)',W/2,30,{align:'center'});
+  doc.setDrawColor(...acc); doc.setLineWidth(0.6); doc.line(M,33,W-M,33);
+  doc.autoTable({startY:36,theme:'plain',margin:{left:M,right:M},styles:{fontSize:9.5,cellPadding:1.2,textColor:ink},
+    columnStyles:{0:{fontStyle:'bold',cellWidth:30},2:{fontStyle:'bold',cellWidth:30}},
+    body:[['Course faculty',pdfSafe(meta.faculty||'-'),'Academic year',pdfSafe(meta.ay||'-')],
+          ['Course code',pdfSafe(meta.code||'-'),'Semester / Sec',pdfSafe((meta.sem||'-')+' / '+(meta.sec||'-'))],
+          ['Programme',pdfSafe(meta.prog||'-'),'Report dated',pdfSafe(meta.rdate||'-')],
+          ['Course name',pdfSafe(meta.cname||'-'),'Assessment',`T1 (${o.maxT}) + Q1 (${o.maxQ}) = ${s.full}`],
+          ['Students ranked',String(s.n)+(s.absent?`  (+${s.absent} absent)`:''),'Mean / SD',`${f1(s.mean)} / ${f1(s.sd)}`],
+          ['Bright identified',String(res.bright.length),'Weak identified',String(res.weak.length)]]});
+  const catName={B:'Bright',W:'Weak',A:'Absent'};
+  doc.autoTable({startY:doc.lastAutoTable.finalY+4,margin:{left:M,right:M},
+    head:[['Sl','USN','Student Name','T1','Q1','Total','%','Rank','Category']],
+    body:res.all.map((x,i)=>[i+1,x.usn,pdfSafe(x.name),x.t1??'AB',x.q1??'AB',x.total??'-',x.pct===null?'-':f1(x.pct),x.rank??'-',catName[x.cat]||'']),
+    styles:{fontSize:8.6,cellPadding:1.3,textColor:ink,lineColor:[217,223,219],lineWidth:0.1},
+    headStyles:{fillColor:acc,textColor:255,fontStyle:'bold'},
+    columnStyles:{0:{halign:'right',cellWidth:9},1:{font:'courier',cellWidth:27},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'right'},7:{halign:'right'}},
+    didParseCell:d=>{ if(d.section!=='body') return; const c=res.all[d.row.index].cat;
+      if(c==='B'){d.cell.styles.fillColor=[227,242,231]; if(d.column.index===8){d.cell.styles.textColor=grn;d.cell.styles.fontStyle='bold';}}
+      else if(c==='W'){d.cell.styles.fillColor=[251,233,223]; if(d.column.index===8){d.cell.styles.textColor=org;d.cell.styles.fontStyle='bold';}}
+      else if(c==='A'){d.cell.styles.textColor=mut;} }});
+  const listTable=(title,arr,col,fill)=>{
+    doc.autoTable({startY:doc.lastAutoTable.finalY+6,margin:{left:M,right:M},pageBreak:'auto',rowPageBreak:'avoid',
+      head:[[{content:`${title} (${arr.length})`,colSpan:5,styles:{halign:'left',fillColor:col,textColor:255}}],['Sl','USN','Student Name','Total','%']],
+      body:arr.length?arr.map((x,i)=>[i+1,x.usn,pdfSafe(x.name),x.total===null?'AB':`${x.total} / ${s.full}`,x.pct===null?'-':f1(x.pct)]):[[{content:'None under this rule.',colSpan:5}]],
+      styles:{fontSize:9,cellPadding:1.4,textColor:ink,fillColor:fill,lineColor:[217,223,219],lineWidth:0.1},
+      headStyles:{fillColor:[240,243,241],textColor:ink,fontStyle:'bold'},
+      columnStyles:{0:{halign:'right',cellWidth:9},1:{font:'courier',cellWidth:30},3:{halign:'right',cellWidth:24},4:{halign:'right',cellWidth:16}}});
+  };
+  listTable('BRIGHT LEARNERS',res.bright,grn,[243,250,245]);
+  listTable('WEAK LEARNERS',res.weak,org,[253,245,240]);
+  const ab=res.all.filter(x=>x.absent); if(ab.length) listTable('ABSENT / NO MARKS',ab,[138,106,0],[253,249,235]);
+  // rule box
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.2);
+  const tw=W-2*M-8; const wrapped=lines.map(l=>doc.splitTextToSize('-  '+pdfSafe(l),tw)); const lh=4.3; const hBox=8+wrapped.reduce((a,w)=>a+w.length*lh,0)+2;
+  let y=doc.lastAutoTable.finalY+7; const H=doc.internal.pageSize.getHeight();
+  if(y+hBox+30>H-12){doc.addPage(); y=18;}
+  doc.setFillColor(226,239,236); doc.setDrawColor(...acc); doc.rect(M,y,W-2*M,hBox,'F'); doc.setLineWidth(1); doc.line(M,y,M,y+hBox);
+  doc.setFont('helvetica','bold'); doc.setTextColor(...acc); doc.setFontSize(10); doc.text('RULE APPLIED',M+4,y+5.5);
+  doc.setFont('helvetica','normal'); doc.setTextColor(...ink); doc.setFontSize(9.2);
+  let yy=y+10.5; wrapped.forEach(w=>{doc.text(w,M+4,yy); yy+=w.length*lh;});
+  // signatures
+  const ys=y+hBox+24; doc.setFontSize(9.5); doc.setDrawColor(...mut); doc.setLineWidth(0.2);
+  doc.line(M,ys,M+55,ys); doc.line(W-M-55,ys,W-M,ys);
+  doc.text('Course Faculty',M,ys+5); doc.text(pdfSafe(meta.faculty||''),M,ys+10);
+  doc.text('Head of the Department, ETE',W-M-55,ys+5);
+  const pages=doc.getNumberOfPages();
+  for(let p=1;p<=pages;p++){doc.setPage(p); doc.setFontSize(7.5); doc.setTextColor(...mut);
+    doc.text(`Page ${p} of ${pages}`,W-M,H-7,{align:'right'});}
+  return doc.output('blob');
+}
+function buildDocx(D,meta,res,o,lines){
+  const {Document,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,AlignmentType,ShadingType,BorderStyle,Footer,PageNumber,HeadingLevel}=D;
+  const s=res.stats, ACC='1F5E54', GRN='1D6B3A', ORG='A3461D', MUT='5B6661';
+  const shade=f=>({fill:f,type:ShadingType.CLEAR,color:'auto'});
+  const P=(text,opt={})=>new Paragraph({alignment:opt.align,spacing:{before:opt.before||0,after:opt.after??0},
+    children:[new TextRun({text:String(text??''),bold:opt.bold,size:opt.size||19,color:opt.color,font:opt.font})]});
+  const cell=(text,opt={})=>new TableCell({shading:opt.fill?shade(opt.fill):undefined,width:opt.w?{size:Math.round(opt.w*101),type:WidthType.DXA}:undefined,
+    columnSpan:opt.span,margins:{top:30,bottom:30,left:80,right:80},children:[P(text,{bold:opt.bold,color:opt.color,size:opt.size||18,align:opt.align,font:opt.font})]});
+  const none={style:BorderStyle.NONE,size:0,color:'FFFFFF'};
+  const noB={top:none,bottom:none,left:none,right:none,insideHorizontal:none,insideVertical:none};
+  const cw=a=>a.map(w=>Math.round(w*101));
+  const R=AlignmentType.RIGHT, C=AlignmentType.CENTER;
+  const head=(cols,fill,widths)=>new TableRow({tableHeader:true,children:cols.map((c,i)=>cell(c,{bold:true,color:'FFFFFF',fill,w:widths&&widths[i]}))});
+  const kids=[];
+  kids.push(P('SIDDAGANGA INSTITUTE OF TECHNOLOGY, TUMAKURU',{bold:true,size:28,align:C}));
+  kids.push(P('Department of Electronics and Telecommunication Engineering',{size:21,align:C,after:60}));
+  kids.push(P('Identification of Bright and Weak Learners (based on T1 and Q1)',{bold:true,size:24,color:ACC,align:C,after:160}));
+  const info=[['Course faculty',meta.faculty,'Academic year',meta.ay],['Course code',meta.code,'Semester / Sec',(meta.sem||'-')+' / '+(meta.sec||'-')],
+    ['Programme',meta.prog,'Report dated',meta.rdate],['Course name',meta.cname,'Assessment',`T1 (${o.maxT}) + Q1 (${o.maxQ}) = ${s.full}`],
+    ['Students ranked',String(s.n)+(s.absent?`  (+${s.absent} absent)`:''),'Mean / SD',`${f1(s.mean)} / ${f1(s.sd)}`],
+    ['Bright identified',String(res.bright.length),'Weak identified',String(res.weak.length)]];
+  kids.push(new Table({width:{size:10100,type:WidthType.DXA},columnWidths:cw([18,32,18,32]),borders:noB,rows:info.map(r=>new TableRow({children:[
+    cell(r[0],{bold:true,w:18}),cell(r[1]||'-',{w:32}),cell(r[2],{bold:true,w:18}),cell(r[3]||'-',{w:32})]}))}));
+  kids.push(P('Class list',{bold:true,size:22,color:ACC,before:200,after:80}));
+  const catName={B:'Bright',W:'Weak',A:'Absent'};
+  const W=[5,17,36,7,7,8,8,6,10];
+  kids.push(new Table({width:{size:10100,type:WidthType.DXA},columnWidths:cw(W),rows:[head(['Sl','USN','Student Name','T1','Q1','Total','%','Rank','Category'],ACC,W)].concat(
+    res.all.map((x,i)=>{const f=x.cat==='B'?'E3F2E7':x.cat==='W'?'FBE9DF':undefined; const cc=x.cat==='B'?GRN:x.cat==='W'?ORG:x.cat==='A'?MUT:undefined;
+      return new TableRow({children:[cell(i+1,{fill:f,align:R,w:5}),cell(x.usn,{fill:f,font:'Consolas',size:17,w:17}),cell(x.name,{fill:f,w:36}),cell(x.t1??'AB',{fill:f,align:R}),cell(x.q1??'AB',{fill:f,align:R}),
+        cell(x.total??'-',{fill:f,align:R}),cell(x.pct===null?'-':f1(x.pct),{fill:f,align:R}),cell(x.rank??'-',{fill:f,align:R}),cell(catName[x.cat]||'',{fill:f,bold:!!x.cat,color:cc})]});}))}));
+  const list=(title,arr,col,fill)=>{
+    kids.push(P(`${title} (${arr.length})`,{bold:true,size:22,color:col,before:240,after:80}));
+    const WW=[8,22,46,14,10];
+    kids.push(new Table({width:{size:10100,type:WidthType.DXA},columnWidths:cw(WW),rows:[head(['Sl','USN','Student Name','Total','%'],col,WW)].concat(
+      arr.length?arr.map((x,i)=>new TableRow({children:[cell(i+1,{fill,align:R,w:8}),cell(x.usn,{fill,font:'Consolas',size:17,w:22}),cell(x.name,{fill,w:46}),
+        cell(x.total===null?'AB':`${x.total} / ${s.full}`,{fill,align:R}),cell(x.pct===null?'-':f1(x.pct),{fill,align:R})]})):
+      [new TableRow({children:[cell('None under this rule.',{span:5})]})])}));
+  };
+  list('Bright learners',res.bright,GRN,'F3FAF5');
+  list('Weak learners',res.weak,ORG,'FDF5F0');
+  const ab=res.all.filter(x=>x.absent); if(ab.length) list('Absent / no marks',ab,'8A6A00','FDF9EB');
+  kids.push(new Table({width:{size:10100,type:WidthType.DXA},columnWidths:[10100],borders:{...noB,left:{style:BorderStyle.SINGLE,size:18,color:ACC}},
+    rows:[new TableRow({children:[new TableCell({width:{size:10100,type:WidthType.DXA},shading:shade('E2EFEC'),margins:{top:100,bottom:100,left:160,right:160},
+      children:[P('RULE APPLIED',{bold:true,color:ACC,size:20,after:60})].concat(lines.map(l=>new Paragraph({bullet:{level:0},spacing:{after:40},children:[new TextRun({text:l,size:19})]})))})]})]}));
+  kids.push(P('',{before:900}));
+  kids.push(new Table({width:{size:10100,type:WidthType.DXA},columnWidths:cw([50,50]),borders:noB,rows:[
+    new TableRow({children:[cell('______________________________',{w:50}),cell('______________________________',{w:50,align:R})]}),
+    new TableRow({children:[cell('Course Faculty',{bold:true,size:19}),cell('Head of the Department, ETE',{bold:true,size:19,align:R})]}),
+    new TableRow({children:[cell(meta.faculty||'',{size:19}),cell('',{})]})]}));
+  return new Document({styles:{default:{document:{run:{font:'Calibri',size:19}}}},
+    sections:[{properties:{page:{margin:{top:900,bottom:900,left:900,right:900}}},
+      footers:{default:new Footer({children:[new Paragraph({alignment:R,children:[new TextRun({children:['Page ',PageNumber.CURRENT,' of ',PageNumber.TOTAL_PAGES],size:15,color:MUT})]})]})},
+      children:kids}]});
+}
+
+if(typeof module!=='undefined') module.exports={parseRows,categorise,ruleLines,buildPdf,matchFaculty,buildDocx};
+</script>
+<script>
+/* ---------- page ---------- */
+const FACULTY=["Dr. K Viswanath","Dr. K C Narasimhamurthy","Dr. Sujatha M N","Dr. Mallikarjun B C","Dr. Chandrika T N","Dr. Chandrashekar H M","Dr. Sathisha R N","Dr. Kumuda D K","Dr. Usha L","Dr. Naveenkumar M","Dr. Rakesh M B","Dr. Suchitra V","Dr. Puneeth Kumar T R"];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+FACULTY.forEach(f=>{const o=document.createElement('option');o.textContent=f;$('f-faculty').appendChild(o);});
+try{const f=localStorage.getItem('lc-faculty'); if(f) $('f-faculty').value=f;}catch(e){}
+
+// Example data (fictitious) so the page shows its output before a file is loaded
+const EXAMPLE=(()=>{const n=["AARAV K","BHAVANA S","CHIRAG M","DIVYA R","ESHWAR P","FARHAN A","GAGANA H","HARISH N","ISHA T","JEEVAN B","KAVYA L","LIKHITH G","MEGHANA D","NIKHIL V","OJAS C","PALLAVI J","RAHUL Y","SNEHA K","TEJAS M","VARSHA P","YASHAS R","ZOYA F"];
+ const t=[31,22,27,34,18,29,25,12,30,26,20,33,24,15,28,23,9,32,21,27,19,26], q=[7,6,8,8,5,7,6,4,8,7,5,8,6,5,7,6,3,8,6,7,5,6];
+ return n.map((x,i)=>({usn:'1SI00ET'+String(901+i),name:x+' (example)',t1:i===10?null:t[i],q1:i===10?null:q[i]}));})();
+let students=EXAMPLE, isExample=true, lastRes=null;
+
+function opts(){return {maxT:Number($('f-maxt').value)||1,maxQ:Number($('f-maxq').value)||1,bMode:$('f-bmode').value,nBright:Number($('f-nb').value)||0,wMode:$('f-wmode').value,wParam:Number($('f-wp').value)||0,ties:$('f-ties').checked};}
+function syncBLabel(){
+  const m=$('f-bmode').value, l=$('b-param-l'), el=$('f-nb');
+  l.firstChild.textContent=m==='pct'?'Percentage threshold (%) — at or above':'Number of bright students';
+  if(el.dataset.mode!==m){
+    if(m==='pct'){ el.value=85; el.max=100; }
+    else { el.value=5; el.removeAttribute('max'); }
+    el.dataset.mode=m;
+  }
+  $('chips-b-label').textContent=m==='pct'?'Quick pick for bright (% of maximum):':'Quick pick for bright:';
+}
+function syncWLabel(){
+  const m=$('f-wmode').value, l=$('w-param-l');
+  l.firstChild.textContent=m==='bottom'?'Number of weak students':m==='sd'?'k (number of SDs below mean)':'Percentage threshold (%) — below';
+  if(m==='bottom'&&!$('f-wp').dataset.touchedB) $('f-wp').value=$('f-bmode').value==='top'?$('f-nb').value:5;
+  if(m==='sd'&&$('f-wp').dataset.mode!=='sd') $('f-wp').value=1;
+  if(m==='pct'&&$('f-wp').dataset.mode!=='pct') $('f-wp').value=40;
+  $('f-wp').dataset.mode=m;
+}
+function chips(){
+  const n=students.filter(s=>s.t1!==null||s.q1!==null).length;
+  const c=$('chips-b'); c.innerHTML='';
+  const pctMode=$('f-bmode').value==='pct';
+  const list=pctMode?[[75,'≥ 75%'],[80,'≥ 80%'],[85,'≥ 85%'],[90,'≥ 90%']]
+    :[[5,'5'],[10,'10'],[Math.max(1,Math.round(n*.1)),'Top 10%'],[Math.max(1,Math.round(n*.15)),'Top 15%'],[Math.max(1,Math.round(n*.2)),'Top 20%']];
+  list.forEach(([v,l])=>{
+    const b=document.createElement('button'); b.className='chip'; b.type='button'; b.textContent=l+(!pctMode&&l.includes('%')?` (${v})`:''); b.setAttribute('aria-pressed',String(Number($('f-nb').value)===v));
+    b.onclick=()=>{$('f-nb').value=v; if(!pctMode&&$('f-wmode').value==='bottom'&&!$('f-wp').dataset.touchedB) $('f-wp').value=v; render();}; c.appendChild(b);});
+}
+function render(){
+  const o=opts(); const res=categorise(students,o); lastRes=res; chips();
+  $('ex-flag').hidden=!isExample;
+  const s=res.stats;
+  $('stats').innerHTML=[['Students',s.n+(s.absent?` <small>+${s.absent} AB</small>`:'')],['Mean',f1(s.mean)],['SD',f1(s.sd)],['Median',f1(s.median)],['Highest',s.max],['Lowest',s.min],['Bright',res.bright.length],['Weak',res.weak.length]]
+    .map(([k,v])=>`<div class="stat"><b>${v}</b><span>${k}</span></div>`).join('');
+  const tag=c=>c==='B'?'<span class="tag b">Bright</span>':c==='W'?'<span class="tag w">Weak</span>':c==='A'?'<span class="tag a">Absent</span>':'';
+  $('tbl').innerHTML=`<thead><tr><th class="num">Sl</th><th>USN</th><th>Student name</th><th class="num">T1 /${o.maxT}</th><th class="num">Q1 /${o.maxQ}</th><th class="num">Total /${s.full}</th><th class="num">%</th><th class="num">Rank</th><th>Category</th></tr></thead><tbody>`+
+    res.all.map((x,i)=>`<tr><td class="num">${i+1}</td><td class="usn">${esc(x.usn)}</td><td>${esc(x.name)}</td><td class="num">${x.t1??'AB'}</td><td class="num">${x.q1??'AB'}</td><td class="num">${x.total??'—'}</td><td class="num">${x.pct===null?'—':f1(x.pct)}</td><td class="num">${x.rank??'—'}</td><td>${tag(x.cat)}</td></tr>`).join('')+'</tbody>';
+  const li=a=>a.length?'<ol>'+a.map(x=>`<li>${esc(x.name)} <span class="usn">${esc(x.usn)} · ${x.total}/${s.full}</span></li>`).join('')+'</ol>':'<div class="hint">None under this rule.</div>';
+  const ab=res.all.filter(x=>x.absent);
+  $('lists').innerHTML=`<div class="listbox b"><h3><span>Bright learners</span><span>${res.bright.length}</span></h3>${li(res.bright)}</div><div class="listbox w"><h3><span>Weak learners</span><span>${res.weak.length}</span></h3>${li(res.weak)}</div>`+(ab.length?`<div class="listbox" style="background:var(--warn-soft)"><h3 style="color:var(--warn)"><span>Absent / no marks</span><span>${ab.length}</span></h3>${li(ab.map(x=>({...x,total:'AB'})))}</div>`:'');
+  $('rule').innerHTML='<b>Rule applied</b><ul>'+ruleLines(res,o).map(l=>`<li>${esc(l)}</li>`).join('')+'</ul>';
+}
+function msg(el,text,kind){const e=$(el); e.hidden=!text; e.className='note'+(kind?' '+kind:''); e.textContent=text||'';}
+
+// ---- file handling
+$('b-pick').onclick=()=>$('f-file').click();
+$('f-file').onchange=e=>{ if(e.target.files[0]) readFile(e.target.files[0]); e.target.value=''; };
+$('b-pick-many').onclick=()=>$('f-files').click();
+$('f-files').onchange=async e=>{const files=[...(e.target.files||[])];e.target.value='';if(files.length)await facultyBatchUpload(files);};
+const drop=$('drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>{const fs=[...(e.dataTransfer.files||[])].filter(f=>/\.(xlsx?|csv)$/i.test(f.name)); if(fs.length>1)facultyBatchUpload(fs);else if(fs[0])readFile(fs[0]);});
+function readFile(file){
+  if(typeof XLSX==='undefined'){msg('parse-msg','The spreadsheet reader did not load. Reload the page and try again.','err');return;}
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(fr.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
+      const p=parseRows(rows);
+      students=p.students; isExample=false;
+      if(p.meta.maxT) $('f-maxt').value=p.meta.maxT;
+      if(p.meta.maxQ) $('f-maxq').value=p.meta.maxQ;
+      const filled=[], missing=[];
+      const fac=matchFaculty(p.meta.facultyRaw,FACULTY);
+      if(fac){ $('f-faculty').value=fac; filled.push('faculty'); try{localStorage.setItem('lc-faculty',fac);}catch(e){} } else missing.push('faculty name'+(p.meta.facultyRaw?` (report says “${p.meta.facultyRaw}”)`:''));
+      if(p.meta.code){ $('f-code').value=p.meta.code; filled.push('course code'); } else missing.push('course code');
+      if(p.meta.sem){ $('f-sem').value=p.meta.sem; filled.push('semester'); } else missing.push('semester');
+      if(p.meta.ay){ $('f-ay').value=p.meta.ay; filled.push('academic year'); }
+      $('f-prog').value=p.meta.program||''; { const el=$('f-rdate'); delete el.dataset.edited;
+        if(p.meta.reportDate){ el.value=p.meta.reportDate; el.dataset.src='report'; setDateTag('from report'); }
+        else { el.dataset.src=''; if(!$('f-ay').value) $('f-ay').value=defaultAy($('f-sem').value); autoDate(); } }
+      document.querySelectorAll('[data-auto]').forEach(el=>{ const k=el.dataset.auto; el.hidden=!({faculty:fac,code:p.meta.code,sem:p.meta.sem,ay:p.meta.ay}[k]); });
+      $('details-step').hidden=false;
+      msg('parse-msg',`Read ${students.length} students from “${file.name}”. Filled from the report: ${filled.join(', ')||'nothing'}.`+(missing.length?` Please select or type: ${missing.join(', ')}.`:'')+(p.warnings.length?' '+p.warnings.join(' '):''),missing.length||p.warnings.length?'':'ok');
+      msg('submit-msg','');
+      render();
+      makeReport(true);
+    }catch(err){msg('parse-msg',err.message||'This file could not be read.','err');}
+  };
+  fr.readAsArrayBuffer(file);
+}
+
+// ---- inputs
+['f-maxt','f-maxq','f-nb','f-ties'].forEach(id=>$(id).addEventListener('input',()=>{ if(id==='f-nb'&&$('f-bmode').value==='top'&&$('f-wmode').value==='bottom'&&!$('f-wp').dataset.touchedB) $('f-wp').value=$('f-nb').value; render();}));
+$('f-wp').addEventListener('input',()=>{ if($('f-wmode').value==='bottom') $('f-wp').dataset.touchedB='1'; render();});
+$('f-bmode').addEventListener('change',()=>{syncBLabel();syncWLabel();render();});
+$('f-wmode').addEventListener('change',()=>{syncWLabel();render();});
+// One-click preset: bright = 85% and above, weak = below 40%
+$('b-preset').addEventListener('click',()=>{
+  $('f-bmode').value='pct'; syncBLabel(); $('f-nb').value=85;
+  $('f-wmode').value='pct'; $('f-wp').dataset.mode=''; syncWLabel(); $('f-wp').value=40;
+  render();
+});
+// ---- report date: editable; random working day in the term when the report has none
+function defaultAy(sem){ const t=new Date(), Y=t.getFullYear(), mo=t.getMonth()+1;
+  const odd=sem?Number(sem)%2===1:mo>=6; const st=odd?(mo>=6?Y:Y-1):(mo<=8?Y-1:Y); return `${st}-${String(st+1).slice(-2)}`; }
+function randomReportDate(ay,sem){
+  const m=String(ay||'').match(/(\d{4})/); if(!m) return '';
+  const y0=Number(m[1]), odd=sem?Number(sem)%2===1:true;
+  const a=odd?new Date(y0,8,1):new Date(y0+1,1,1), b=odd?new Date(y0,10,30):new Date(y0+1,4,31);
+  let d; do{ d=new Date(a.getTime()+Math.random()*(b-a)); }while(d.getDay()===0);
+  return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+}
+function setDateTag(t){ const g=$('rdate-tag'); g.hidden=!t; g.textContent=t||''; }
+function autoDate(){ const el=$('f-rdate'); if(el.dataset.src==='report'||el.dataset.edited) return;
+  el.value=randomReportDate($('f-ay').value,$('f-sem').value); el.dataset.src='auto'; setDateTag(el.value?'auto-picked':''); }
+$('f-rdate').addEventListener('input',()=>{ $('f-rdate').dataset.edited='1'; setDateTag(''); });
+['f-ay','f-sem'].forEach(id=>$(id).addEventListener('change',autoDate));
+$('f-faculty').addEventListener('change',()=>{try{localStorage.setItem('lc-faculty',$('f-faculty').value);}catch(e){}});
+
+// ---- Google Apps Script web-app URL used for faculty uploads and coordinator login
+const SHEET_URL='https://script.google.com/macros/s/AKfycbzYjyop-YyBlXEyJM5TDA11ZnH4cjLhAFzkwVHzuFycxLNqwuYTGtsjHFGSM6lTSVOQ/exec';
+const capsReady=Promise.resolve();
+const downloads={save:async({filename,data})=>{
+  const blob=data instanceof Blob?data:new Blob([data],{type:'text/csv'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);}};
+
+function csvCell(v){v=String(v??''); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+async function save(filename,text){
+  if(!downloads) return;
+  try{ await downloads.save({filename,data:text}); }catch(e){ if(e&&e.code!=='declined') alertNote('The file could not be saved ('+(e.code||'error')+').'); }
+}
+function alertNote(t){msg('submit-msg',t,'err');}
+$('b-template').onclick=()=>save('T1_Q1_marks_template.csv','USN,Student Name,T1(34),Q1(8)\n1SI23ET001,STUDENT NAME,25,7\n');
+function resultCsv(meta,res,lines){
+  const head=[['Faculty',meta.faculty],['Course',meta.code+' '+(meta.cname||'')],['Semester',meta.sem],['Section',meta.sec],['Academic year',meta.ay],[]];
+  const rows=[['Sl','USN','Student Name','T1','Q1','Total','Percent','Rank','Category']].concat(res.all.map((x,i)=>[i+1,x.usn,x.name,x.t1??'AB',x.q1??'AB',x.total??'',x.pct===null?'':f1(x.pct),x.rank??'',{B:'Bright',W:'Weak',A:'Absent'}[x.cat]||'']));
+  const tail=[[],['BRIGHT LEARNERS']].concat(res.bright.map((x,i)=>[i+1,x.usn,x.name,'','',x.total])).concat([[],['WEAK LEARNERS']]).concat(res.weak.map((x,i)=>[i+1,x.usn,x.name,'','',x.total])).concat([[],['RULE APPLIED']]).concat(lines.map(l=>[l]));
+  return head.concat(rows,tail).map(r=>r.map(csvCell).join(',')).join('\n');
+}
+function formMeta(){return {faculty:$('f-faculty').value,code:$('f-code').value.trim().toUpperCase(),cname:$('f-cname').value.trim(),sem:$('f-sem').value,sec:$('f-sec').value.trim().toUpperCase(),ay:$('f-ay').value.trim(),prog:$('f-prog').value.trim(),rdate:$('f-rdate').value.trim()};}
+$('b-csv').onclick=()=>{const m=formMeta(); save(`${m.code||'course'}_Sem${m.sem||''}${m.sec}_bright_weak.csv`,resultCsv(m,lastRes,ruleLines(lastRes,opts())));};
+
+const slug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'x';
+function pdfName(m){return `${m.code||'Course'}_Sem${m.sem||''}${m.sec||''}_Bright_Weak_Learners.pdf`.replace(/\s+/g,'_');}
+async function makeReport(fromUpload){
+  await capsReady;
+  const m=formMeta(), o=opts(), res=lastRes, lines=ruleLines(res,o);
+  if(!window.jspdf||!window.jspdf.jsPDF){ msg('submit-msg','The PDF builder did not load. Reload the page and try again.','err'); return; }
+  let blob;
+  try{ blob=buildPdf(window.jspdf.jsPDF,m,res,o,lines,new Date().toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})); }
+  catch(e){ msg('submit-msg','The PDF could not be built: '+(e.message||e),'err'); return; }
+  const saved=isExample?'':await saveDept(m,o,res,lines);
+  msg('submit-msg','Preparing your PDF…'+(saved?' '+saved:''),'ok');
+  try{ await downloads.save({filename:pdfName(m),data:blob}); msg('submit-msg','PDF report saved.'+(saved?' '+saved:''),'ok'); }
+  catch(e){ msg('submit-msg',(e&&e.code==='declined'?'Download cancelled. Use “Download PDF report” to get it again.':'The PDF could not be saved ('+(e&&e.code||'error')+'). Try “Download PDF report”.')+(saved?' '+saved:''),e&&e.code==='declined'?'':'err'); }
+}
+$('b-pdf').onclick=()=>makeReport(false);
+$('b-docx').onclick=async()=>{
+  await capsReady;
+  if(!window.docx||!window.docx.Packer){ msg('submit-msg','The Word builder did not load. Reload the page and try again.','err'); return; }
+  if(!downloads){ msg('submit-msg','Downloads are not available in this view.','err'); return; }
+  const m=formMeta(), o=opts(), res=lastRes, lines=ruleLines(res,o);
+  try{
+    const blob=await docx.Packer.toBlob(buildDocx(docx,m,res,o,lines));
+    const saved=isExample?'':await saveDept(m,o,res,lines);
+    await downloads.save({filename:pdfName(m).replace(/\.pdf$/,'.docx'),data:blob});
+    msg('submit-msg','Word report saved.'+(saved?' '+saved:''),'ok');
+  }catch(e){ msg('submit-msg',e&&e.code==='declined'?'Download cancelled.':'The Word file could not be made ('+((e&&(e.code||e.message))||'error')+').',e&&e.code==='declined'?'':'err'); }
+};
+
+async function saveDeptData(m,o,res,lines){
+  if(!SHEET_URL||/^PASTE/.test(SHEET_URL)) return {ok:false,message:'Apps Script URL is not configured.'};
+  if(!m.faculty||!m.code||!m.sem||!m.ay) return {ok:false,message:'Missing faculty, course code, semester or academic year.'};
+  const cat=x=>({B:'Bright',W:'Weak',A:'Absent'}[x.cat]||'');
+  const payload={...m,maxT:o.maxT,maxQ:o.maxQ,brightRule:o.bMode,nBright:o.nBright,weakRule:o.wMode,weakParam:o.wParam,
+    students:res.all.map(x=>({usn:x.usn,name:x.name,t1:x.t1,q1:x.q1,total:x.total,rank:x.rank,category:cat(x)})),
+    nStudents:res.stats.n,mean:Number(f1(res.stats.mean)),sd:Number(f1(res.stats.sd)),
+    brightCount:res.bright.length,weakCount:res.weak.length,rule:lines.join(' | '),submittedAt:new Date().toISOString()};
+  try{ await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+    return {ok:true,message:`Sent ${m.code} (Sem ${m.sem}${m.sec?' '+m.sec:''}) to the department sheet.`}; }
+  catch(e){ return {ok:false,message:'Could not reach the department sheet. Check your internet connection.'}; }
+}
+async function saveDept(m,o,res,lines){const r=await saveDeptData(m,o,res,lines);return r.ok?r.message:r.message;}
+function readWorkbookFile(file){
+  return new Promise((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>{try{const wb=XLSX.read(new Uint8Array(fr.result),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];resolve(parseRows(XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true})));}catch(err){reject(err);}};fr.onerror=()=>reject(new Error('Could not read '+file.name));fr.readAsArrayBuffer(file);});
+}
+async function facultyBatchUpload(files){
+  if(typeof XLSX==='undefined'){msg('parse-msg','Spreadsheet reader did not load. Reload and try again.','err');return;}
+  const base=opts(), fallback=formMeta(), results=[];
+  msg('parse-msg',`Processing ${files.length} file(s)…`,'ok');
+  for(const file of files){
+    try{
+      const parsed=await readWorkbookFile(file), meta=parsed.meta;
+      const faculty=matchFaculty(meta.facultyRaw,FACULTY)||fallback.faculty;
+      const m={...fallback,faculty,code:String(meta.code||fallback.code||'').trim().toUpperCase(),sem:String(meta.sem||fallback.sem||''),ay:String(meta.ay||fallback.ay||''),prog:meta.program||fallback.prog||'',rdate:meta.reportDate||fallback.rdate||''};
+      const o={...base,maxT:Number(meta.maxT||base.maxT),maxQ:Number(meta.maxQ||base.maxQ)};
+      if(!m.faculty||!m.code||!m.sem||!m.ay){results.push(`${file.name}: skipped (missing faculty/course/semester/year; fill these in the form first).`);continue;}
+      const res=categorise(parsed.students,o), lines=ruleLines(res,o), saved=await saveDeptData(m,o,res,lines);
+      results.push(`${file.name}: ${saved.ok?'saved':'not saved'} — ${m.ay}, Sem ${m.sem}, ${m.code}; ${res.bright.length} bright students${saved.ok?'':` (${saved.message})`}`);
+    }catch(err){results.push(`${file.name}: failed — ${err.message||err}`);}
+  }
+  msg('parse-msg',results.join(' | '),results.every(x=>x.includes('saved —'))?'ok':'err');
+}
+
+/* ---------- coordinator view ---------- */
+let C={subs:[],students:[]};
+const sheetReady=()=>!!SHEET_URL&&!/^PASTE/.test(SHEET_URL);
+const mark=v=>(v===''||v===null||v===undefined)?'AB':v;
+const catOrd={Bright:0,Weak:1};
+function showTab(w){
+  const c=w==='consol';
+  $('view-submit').hidden=c; $('view-consol').hidden=!c;
+  $('t-submit').setAttribute('aria-selected',String(!c)); $('t-consol').setAttribute('aria-selected',String(c));
+  if(c){ $('c-setup').textContent='The department sheet is not connected yet. Check the Google Apps Script web-app URL in SHEET_URL.'; $('c-setup').hidden=sheetReady(); if(getCoordinatorToken()) { showCoordinatorSession(true,'coordinator'); cRefresh(); } }
+}
+$('t-submit').onclick=()=>showTab('submit'); $('t-consol').onclick=()=>showTab('consol');
+
+function ruleShort(s){
+  const b=s.brightRule==='pct'?`≥ ${s.brightParam}%`:`Top ${s.brightParam}`;
+  const w=s.weakRule==='pct'?`< ${s.weakParam}%`:s.weakRule==='sd'?`< mean − ${s.weakParam} SD`:`Bottom ${s.weakParam}`;
+  return `Bright ${b} · Weak ${w}`;
+}
+function fillSel(id,items){
+  const el=$(id), cur=el.value;
+  el.innerHTML='<option value="">All</option>'+items.map(i=>`<option value="${esc(i.v)}">${esc(i.l)}</option>`).join('');
+  if([...el.options].some(o=>o.value===cur)) el.value=cur;
+}
+function cFill(){
+  const uniq=a=>[...new Set(a.map(String))];
+  fillSel('c-ay',uniq(C.subs.map(s=>s.academicYear)).sort().reverse().map(v=>({v,l:v})));
+  fillSel('c-sem',uniq(C.subs.map(s=>s.semester)).sort((a,b)=>a-b).map(v=>({v,l:'Semester '+v})));
+  const seen=new Map(); C.subs.forEach(s=>{ if(!seen.has(s.courseCode)) seen.set(s.courseCode,s.courseName); });
+  fillSel('c-code',[...seen].sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([v,n])=>({v,l:v+(n?' — '+n:'')})));
+}
+function cFiltered(){
+  const ay=$('c-ay').value, sem=$('c-sem').value, code=$('c-code').value, cat=$('c-cat').value;
+  const want=cat==='B'?['Bright']:cat==='W'?['Weak']:['Bright','Weak'];
+  const subs=C.subs.filter(s=>(!ay||String(s.academicYear)===ay)&&(!sem||String(s.semester)===sem)&&(!code||String(s.courseCode)===code));
+  const keys=new Set(subs.map(s=>s.key));
+  const rows=C.students.filter(x=>keys.has(x.key)&&want.includes(x.category));
+  return {subs,rows};
+}
+function cGroup(rows){
+  const m=new Map();
+  rows.forEach(x=>{
+    const k=x.academicYear+'|'+x.semester;
+    if(!m.has(k)) m.set(k,{ay:String(x.academicYear),sem:String(x.semester),subjects:new Map()});
+    const g=m.get(k);
+    if(!g.subjects.has(x.key)) g.subjects.set(x.key,{code:x.courseCode,cname:x.courseName,sec:x.section,faculty:x.faculty,rows:[]});
+    g.subjects.get(x.key).rows.push(x);
+  });
+  const byStu=(a,b)=>((catOrd[a.category]??9)-(catOrd[b.category]??9))||(Number(b.total)-Number(a.total))||String(a.usn).localeCompare(String(b.usn));
+  return [...m.values()]
+    .sort((a,b)=>b.ay.localeCompare(a.ay)||Number(a.sem)-Number(b.sem))
+    .map(g=>({ay:g.ay,sem:g.sem,subjects:[...g.subjects.values()]
+      .map(s=>({...s,rows:s.rows.sort(byStu)}))
+      .sort((a,b)=>String(a.code).localeCompare(String(b.code))||String(a.sec).localeCompare(String(b.sec)))}));
+}
+const tagC=c=>c==='Bright'?'<span class="tag b">Bright</span>':c==='Weak'?'<span class="tag w">Weak</span>':esc(c||'');
+const subjTitle=sb=>`${sb.code}${sb.cname?' — '+sb.cname:''}${sb.sec?' · Sec '+sb.sec:''}`;
+function cRender(){
+  const {subs,rows}=cFiltered();
+  const ordered=[...subs].sort((a,b)=>String(b.academicYear).localeCompare(String(a.academicYear))||Number(a.semester)-Number(b.semester)||String(a.courseCode).localeCompare(String(b.courseCode)));
+  const dt=s=>{const d=new Date(s.submittedAt); return isNaN(d)?'':d.toLocaleDateString('en-IN');};
+  $('c-count').textContent=`Subjects uploaded (${subs.length})`;
+  $('c-subs').innerHTML='<thead><tr><th>Year</th><th class="num">Sem</th><th>Course</th><th>Sec</th><th>Faculty</th><th class="num">Students</th><th class="num">Bright</th><th class="num">Weak</th><th>Rule</th><th>Uploaded</th></tr></thead><tbody>'+
+    (ordered.length?ordered.map(s=>`<tr><td>${esc(s.academicYear)}</td><td class="num">${esc(s.semester)}</td><td>${esc(s.courseCode)}${s.courseName?' — '+esc(s.courseName):''}</td><td>${esc(s.section)}</td><td>${esc(s.faculty)}</td><td class="num">${esc(s.students)}</td><td class="num">${esc(s.bright)}</td><td class="num">${esc(s.weak)}</td><td>${esc(ruleShort(s))}</td><td>${esc(dt(s))}</td></tr>`).join(''):'<tr><td colspan="10">No subjects match these filters.</td></tr>')+'</tbody>';
+  const g=cGroup(rows);
+  $('c-list-h').textContent=`Student list (${rows.length})`;
+  $('c-groups').innerHTML=g.length?g.map(grp=>`<div class="panel"><h3>${esc(grp.ay)} · Semester ${esc(grp.sem)}</h3>`+grp.subjects.map(sb=>
+    `<div class="subj"><div class="subj-h"><b>${esc(subjTitle(sb))}</b><span class="hint">${esc(sb.faculty)} · ${sb.rows.length} student(s)</span></div><div class="tbl"><table><thead><tr><th class="num">Sl</th><th>USN</th><th>Student name</th><th class="num">T1</th><th class="num">Q1</th><th class="num">Total</th><th>Category</th></tr></thead><tbody>`+
+    sb.rows.map((x,i)=>`<tr><td class="num">${i+1}</td><td class="usn">${esc(x.usn)}</td><td>${esc(x.name)}</td><td class="num">${esc(mark(x.t1))}</td><td class="num">${esc(mark(x.q1))}</td><td class="num">${esc(x.total)}</td><td>${tagC(x.category)}</td></tr>`).join('')+
+    '</tbody></table></div></div>').join('')+'</div>').join(''):'<div class="hint">No students match these filters.</div>';
+}
+// Coordinator multi-file import: parse Eligibility Reports, classify, and persist them in Sheets.
+$('c-pick-many').onclick=()=>$('c-files').click();
+$('c-files').onchange=async e=>{
+  const files=[...(e.target.files||[])];e.target.value='';if(!files.length)return;
+  if(typeof XLSX==='undefined'){msg('c-msg','Spreadsheet reader did not load. Reload the page and try again.','err');return;}
+  const batch=[],errors=[];
+  msg('c-msg',`Reading ${files.length} file(s)…`,'ok');
+  for(const file of files){
+    try{
+      const parsed=await readWorkbookFile(file),m=parsed.meta;
+      if(!m.code||!m.sem||!m.ay)throw new Error('Course code, semester or academic year could not be read from this report.');
+      const o={maxT:Number(m.maxT||34),maxQ:Number(m.maxQ||8),bMode:'pct',nBright:85,wMode:'pct',wParam:40,ties:true};
+      const res=categorise(parsed.students,o),faculty=matchFaculty(m.facultyRaw,FACULTY)||m.facultyRaw||'Not specified';
+      const lines=ruleLines(res,o);
+      batch.push({ay:m.ay,sem:m.sem,code:m.code,cname:'',sec:'',faculty,maxT:o.maxT,maxQ:o.maxQ,brightRule:'pct',nBright:85,weakRule:'pct',weakParam:40,
+        nStudents:res.stats.n,mean:Number(f1(res.stats.mean)),sd:Number(f1(res.stats.sd)),brightCount:res.bright.length,weakCount:res.weak.length,
+        rule:lines.join(' | '),submittedAt:new Date().toISOString(),students:res.all.map(x=>({usn:x.usn,name:x.name,t1:x.t1,q1:x.q1,total:x.total,rank:x.rank,category:({B:'Bright',W:'Weak',A:'Absent'}[x.cat]||'')}))});
+    }catch(err){errors.push(`${file.name}: ${err.message||err}`);}
+  }
+  if(!batch.length){msg('c-msg','No files could be imported. '+errors.join(' | '),'err');return;}
+  try{
+    const d=await coordinatorPost('coordImport',{token:getCoordinatorToken(),payload:JSON.stringify(batch)});
+    if(!d||!d.ok)throw new Error((d&&d.error)||'The Apps Script import was not confirmed.');
+    await cRefresh();
+    msg('c-msg',`${d.imported} file(s) saved to Google Sheets; ${d.students} student records imported. Bright rule: ≥85%; Weak rule: <40%.${errors.length?' Skipped: '+errors.join(' | '):''}`,'ok');
+  }catch(err){msg('c-msg','Bulk import failed: '+(err.message||err)+(errors.length?' | '+errors.join(' | '):''),'err');}
+};
+
+// Coordinator API: form POST into a hidden iframe avoids putting credentials or
+// session tokens in URLs and avoids relying on cross-origin fetch response headers.
+function coordinatorPost(action, fields){
+  return new Promise((resolve,reject)=>{
+    const requestId=(window.crypto&&window.crypto.randomUUID)?window.crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2);
+    const frame=document.createElement('iframe');
+    const frameName='ete-coord-'+requestId.replace(/[^a-zA-Z0-9]/g,'');
+    frame.name=frameName; frame.style.display='none'; frame.setAttribute('aria-hidden','true');
+    const form=document.createElement('form'); form.method='POST'; form.action=SHEET_URL; form.target=frameName; form.style.display='none';
+    const values={action,requestId,...(fields||{})};
+    Object.keys(values).forEach(k=>{const input=document.createElement('input');input.type='hidden';input.name=k;input.value=String(values[k]??'');form.appendChild(input);});
+    let finished=false;
+    const cleanup=()=>{window.removeEventListener('message',onMessage);form.remove();frame.remove();clearTimeout(timer);};
+    const onMessage=event=>{
+      // Apps Script may redirect the iframe response between Google hosts.
+      // Verify the exact iframe window rather than relying on a hostname suffix.
+      if(event.source!==frame.contentWindow) return;
+      const d=event.data;
+      if(!d||d.channel!=='ETE_COORDINATOR'||d.requestId!==requestId) return;
+      finished=true; cleanup(); resolve(d.data);
+    };
+    const timer=setTimeout(()=>{if(!finished){cleanup();reject(new Error('No response from Apps Script. Check the deployment and try again.'));}},25000);
+    window.addEventListener('message',onMessage);
+    document.body.appendChild(frame);document.body.appendChild(form);form.submit();
+  });
+}
+function getCoordinatorToken(){try{return sessionStorage.getItem('ete-coordinator-session')||'';}catch(e){return '';}}
+function setCoordinatorToken(token){try{if(token)sessionStorage.setItem('ete-coordinator-session',token);else sessionStorage.removeItem('ete-coordinator-session');}catch(e){}}
+function showCoordinatorSession(on,username){
+  $('c-login').hidden=on; $('c-session').hidden=!on;
+  $('c-session-label').textContent=on?'Signed in as '+(username||'coordinator'):'';
+}
+async function cRefresh(){
+  const token=getCoordinatorToken();
+  if(!token){showCoordinatorSession(false);$('c-body').hidden=true;msg('c-msg','Please sign in to continue.','err');return;}
+  $('c-refresh').disabled=true;msg('c-msg','Loading submissions…','ok');
+  try{
+    const d=await coordinatorPost('coordData',{token});
+    if(!d||!d.ok){setCoordinatorToken('');showCoordinatorSession(false);$('c-body').hidden=true;msg('c-msg',(d&&d.error)||'Your session has expired. Please sign in again.','err');return;}
+    C={subs:d.subs||[],students:d.students||[]};
+    showCoordinatorSession(true,d.username);
+    msg('c-msg',C.subs.length?`Loaded ${C.subs.length} subject upload(s) from ${new Set(C.subs.map(s=>s.faculty)).size} faculty.`:'Connected, but no faculty has uploaded a subject yet.','ok');
+    $('c-body').hidden=false;$('c-bulk-tools').hidden=false;cFill();cRender();
+  }catch(e){msg('c-msg',e.message||'Could not reach the Apps Script service.','err');}
+  finally{$('c-refresh').disabled=false;}
+}
+async function cLoad(){
+  if(!sheetReady()){msg('c-msg','The department sheet is not connected. Check SHEET_URL.','err');return;}
+  const username=$('c-username').value.trim(),password=$('c-password').value;
+  if(!username||!password){msg('c-msg','Enter both username and password.','err');return;}
+  $('c-login-btn').disabled=true;msg('c-msg','Signing in…','ok');
+  try{
+    const d=await coordinatorPost('coordLogin',{username,password});
+    $('c-password').value='';
+    if(!d||!d.ok){msg('c-msg',(d&&d.error)||'Sign-in failed.','err');return;}
+    setCoordinatorToken(d.token);showCoordinatorSession(true,d.username);
+    await cRefresh();
+  }catch(e){$('c-password').value='';msg('c-msg',e.message||'Could not reach the Apps Script service.','err');}
+  finally{$('c-login-btn').disabled=false;}
+}
+async function cLogout(){
+  const token=getCoordinatorToken();
+  try{if(token)await coordinatorPost('coordLogout',{token});}catch(e){}
+  setCoordinatorToken('');C={subs:[],students:[]};$('c-body').hidden=true;$('c-bulk-tools').hidden=true;showCoordinatorSession(false);
+  msg('c-msg','You have been logged out.','ok');
+}
+$('c-login-btn').onclick=cLoad;
+$('c-password').addEventListener('keydown',e=>{if(e.key==='Enter')cLoad();});
+$('c-username').addEventListener('keydown',e=>{if(e.key==='Enter')cLoad();});
+$('c-refresh').onclick=cRefresh;$('c-logout').onclick=cLogout;
+['c-ay','c-sem','c-code','c-cat'].forEach(id=>$(id).addEventListener('change',cRender));
+
+// ---- consolidated downloads
+function cDesc(){
+  const cat=$('c-cat').value;
+  return `Academic year: ${$('c-ay').value||'All'}  |  Semester: ${$('c-sem').value||'All'}  |  Subject: ${$('c-code').value||'All'}  |  Showing: ${cat==='B'?'Bright learners':cat==='W'?'Weak learners':'Bright and weak learners'}`;
+}
+function cFileName(ext){
+  const cat=$('c-cat').value==='B'?'Bright':$('c-cat').value==='W'?'Weak':'Bright_Weak';
+  return `Consolidated_${cat}_${($('c-ay').value||'AllYears')}_${$('c-sem').value?'Sem'+$('c-sem').value:'AllSems'}${$('c-code').value?'_'+$('c-code').value:''}.${ext}`.replace(/\s+/g,'_');
+}
+function cCsvText(g){
+  const out=[['Academic year','Semester','Course code','Course name','Section','Faculty','USN','Student name','T1','Q1','Total','Rank','Category']];
+  g.forEach(grp=>grp.subjects.forEach(sb=>sb.rows.forEach(x=>out.push([grp.ay,grp.sem,sb.code,sb.cname,sb.sec,sb.faculty,x.usn,x.name,mark(x.t1),mark(x.q1),x.total,x.rank,x.category]))));
+  return out.map(r=>r.map(csvCell).join(',')).join('\n');
+}
+function cPdf(g,desc){
+  const doc=new window.jspdf.jsPDF({unit:'mm',format:'a4'}); const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight(), M=14;
+  const ink=[29,36,33], acc=[31,94,84], grn=[29,107,58], org=[163,70,29], mut=[91,102,97];
+  doc.setTextColor(...ink); doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.text('SIDDAGANGA INSTITUTE OF TECHNOLOGY, TUMAKURU',W/2,16,{align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
+  doc.text('Department of Electronics and Telecommunication Engineering',W/2,22,{align:'center'});
+  doc.setFont('helvetica','bold'); doc.setFontSize(12.5); doc.setTextColor(...acc);
+  doc.text('Consolidated List of Bright and Weak Learners',W/2,30,{align:'center'});
+  doc.setDrawColor(...acc); doc.setLineWidth(0.6); doc.line(M,33,W-M,33);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...ink);
+  const dl=doc.splitTextToSize(pdfSafe(desc),W-2*M); doc.text(dl,M,38);
+  let y=38+dl.length*4+3;
+  g.forEach(grp=>grp.subjects.forEach(sb=>{
+    doc.autoTable({startY:y,margin:{left:M,right:M},rowPageBreak:'avoid',
+      head:[[{content:pdfSafe(`${grp.ay}  |  Semester ${grp.sem}  |  ${subjTitle(sb)}  |  ${sb.faculty}`),colSpan:7,styles:{halign:'left',fillColor:acc,textColor:255}}],['Sl','USN','Student Name','T1','Q1','Total','Category']],
+      body:sb.rows.map((x,i)=>[i+1,x.usn,pdfSafe(x.name),mark(x.t1),mark(x.q1),x.total,x.category]),
+      styles:{fontSize:8.8,cellPadding:1.3,textColor:ink,lineColor:[217,223,219],lineWidth:0.1},
+      headStyles:{fillColor:[240,243,241],textColor:ink,fontStyle:'bold'},
+      columnStyles:{0:{halign:'right',cellWidth:9},1:{font:'courier',cellWidth:30},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'}},
+      didParseCell:d=>{ if(d.section==='body'&&d.column.index===6){ const c=d.cell.raw; d.cell.styles.fontStyle='bold'; d.cell.styles.textColor=c==='Bright'?grn:c==='Weak'?org:ink; } }});
+    y=doc.lastAutoTable.finalY+6;
+  }));
+  const pages=doc.getNumberOfPages();
+  for(let p=1;p<=pages;p++){ doc.setPage(p); doc.setFontSize(7.5); doc.setTextColor(...mut); doc.text(`Page ${p} of ${pages}`,W-M,H-7,{align:'right'}); }
+  return doc.output('blob');
+}
+function cDocx(g,desc){
+  const {Document,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,AlignmentType,ShadingType,Footer,PageNumber}=window.docx;
+  const ACC='1F5E54', GRN='1D6B3A', ORG='A3461D';
+  const P=(t,o={})=>new Paragraph({alignment:o.align,spacing:{before:o.before||0,after:o.after??60},children:[new TextRun({text:String(t??''),bold:o.bold,size:o.size||20,color:o.color,font:o.font})]});
+  const W=[600,2100,3900,700,700,900,1100];
+  const cell=(t,i,o={})=>new TableCell({width:{size:W[i],type:WidthType.DXA},shading:o.fill?{fill:o.fill,type:ShadingType.CLEAR,color:'auto'}:undefined,margins:{top:30,bottom:30,left:80,right:80},children:[P(t,{bold:o.bold,color:o.color,size:18,align:o.align,after:0,font:o.font})]});
+  const R=AlignmentType.RIGHT, C2=AlignmentType.CENTER;
+  const kids=[P('SIDDAGANGA INSTITUTE OF TECHNOLOGY, TUMAKURU',{bold:true,size:28,align:C2}),
+    P('Department of Electronics and Telecommunication Engineering',{size:21,align:C2,after:60}),
+    P('Consolidated List of Bright and Weak Learners',{bold:true,size:24,color:ACC,align:C2,after:80}),
+    P(desc,{size:18,align:C2,after:160})];
+  g.forEach(grp=>grp.subjects.forEach(sb=>{
+    kids.push(P(`${grp.ay}  ·  Semester ${grp.sem}  ·  ${subjTitle(sb)}`,{bold:true,size:22,color:ACC,before:200,after:20}));
+    kids.push(P(`${sb.faculty}  ·  ${sb.rows.length} student(s)`,{size:18,color:'5B6661',after:60}));
+    kids.push(new Table({width:{size:10000,type:WidthType.DXA},columnWidths:W,rows:[
+      new TableRow({tableHeader:true,children:['Sl','USN','Student Name','T1','Q1','Total','Category'].map((h,i)=>cell(h,i,{bold:true,color:'FFFFFF',fill:ACC,align:(i===0||(i>=3&&i<=5))?R:undefined}))})
+    ].concat(sb.rows.map((x,i)=>{ const f=x.category==='Bright'?'E3F2E7':x.category==='Weak'?'FBE9DF':undefined; const cc=x.category==='Bright'?GRN:x.category==='Weak'?ORG:undefined;
+      return new TableRow({children:[cell(i+1,0,{fill:f,align:R}),cell(x.usn,1,{fill:f,font:'Consolas'}),cell(x.name,2,{fill:f}),cell(mark(x.t1),3,{fill:f,align:R}),cell(mark(x.q1),4,{fill:f,align:R}),cell(x.total,5,{fill:f,align:R}),cell(x.category,6,{fill:f,bold:true,color:cc})]}); }))}));
+  }));
+  return new Document({styles:{default:{document:{run:{font:'Calibri',size:20}}}},
+    sections:[{properties:{page:{margin:{top:900,bottom:900,left:900,right:900}}},
+      footers:{default:new Footer({children:[new Paragraph({alignment:R,children:[new TextRun({children:['Page ',PageNumber.CURRENT,' of ',PageNumber.TOTAL_PAGES],size:15,color:'5B6661'})]})]})},
+      children:kids}]});
+}
+function cGuard(){
+  const {rows}=cFiltered();
+  if(!rows.length){ msg('c-dl','Nothing to download for the chosen filters.','err'); return null; }
+  msg('c-dl',''); return cGroup(rows);
+}
+$('c-csv').onclick=()=>{ const g=cGuard(); if(g) save(cFileName('csv'),cCsvText(g)); };
+$('c-pdf').onclick=async()=>{
+  const g=cGuard(); if(!g) return;
+  if(!window.jspdf||!window.jspdf.jsPDF){ msg('c-dl','The PDF builder did not load. Reload the page and try again.','err'); return; }
+  try{ await downloads.save({filename:cFileName('pdf'),data:cPdf(g,cDesc())}); msg('c-dl','PDF report saved.','ok'); }
+  catch(e){ msg('c-dl','The PDF could not be made: '+((e&&(e.message||e.code))||'error'),'err'); }
+};
+$('c-docx').onclick=async()=>{
+  const g=cGuard(); if(!g) return;
+  if(!window.docx||!window.docx.Packer){ msg('c-dl','The Word builder did not load. Reload the page and try again.','err'); return; }
+  try{ const blob=await window.docx.Packer.toBlob(cDocx(g,cDesc())); await downloads.save({filename:cFileName('docx'),data:blob}); msg('c-dl','Word report saved.','ok'); }
+  catch(e){ msg('c-dl','The Word file could not be made: '+((e&&(e.message||e.code))||'error'),'err'); }
+};
+/* ---------- end coordinator view ---------- */
+
+syncBLabel(); syncWLabel(); render();
+</script>
+</body>
+</html>
