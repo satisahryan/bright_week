@@ -833,6 +833,18 @@ function cFileName(ext){
   const cat=$('c-cat').value==='B'?'Bright':$('c-cat').value==='W'?'Weak':'Bright_Weak';
   return `Consolidated_${cat}_${($('c-ay').value||'AllYears')}_${$('c-sem').value?'Sem'+$('c-sem').value:'AllSems'}${$('c-code').value?'_'+$('c-code').value:''}.${ext}`.replace(/\s+/g,'_');
 }
+// Word report is intentionally Bright-only, regardless of the on-screen Show filter.
+// Academic year, semester and subject filters still apply.
+function cBrightReportGroups(){
+  const ay=$('c-ay').value, sem=$('c-sem').value, code=$('c-code').value;
+  const subs=C.subs.filter(s=>(!ay||String(s.academicYear)===ay)&&(!sem||String(s.semester)===sem)&&(!code||String(s.courseCode)===code));
+  const keys=new Set(subs.map(s=>s.key));
+  const rows=C.students.filter(x=>keys.has(x.key)&&String(x.category||'').toLowerCase()==='bright');
+  return cGroup(rows);
+}
+function cBrightFileName(){
+  return `Consolidated_Bright_Students_${($('c-ay').value||'AllYears')}_${$('c-sem').value?'Sem'+$('c-sem').value:'AllSems'}${$('c-code').value?'_'+$('c-code').value:''}.docx`.replace(/\s+/g,'_');
+}
 function cCsvText(g){
   const out=[['Academic year','Semester','Course code','Course name','Section','Faculty','USN','Student name','T1','Q1','Total','Rank','Category']];
   g.forEach(grp=>grp.subjects.forEach(sb=>sb.rows.forEach(x=>out.push([grp.ay,grp.sem,sb.code,sb.cname,sb.sec,sb.faculty,x.usn,x.name,mark(x.t1),mark(x.q1),x.total,x.rank,x.category]))));
@@ -867,23 +879,32 @@ function cPdf(g,desc){
 }
 function cDocx(g,desc){
   const {Document,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,AlignmentType,ShadingType,Footer,PageNumber}=window.docx;
-  const ACC='1F5E54', GRN='1D6B3A', ORG='A3461D';
+  const ACC='1F5E54', GRN='1D6B3A';
   const P=(t,o={})=>new Paragraph({alignment:o.align,spacing:{before:o.before||0,after:o.after??60},children:[new TextRun({text:String(t??''),bold:o.bold,size:o.size||20,color:o.color,font:o.font})]});
-  const W=[600,2100,3900,700,700,900,1100];
-  const cell=(t,i,o={})=>new TableCell({width:{size:W[i],type:WidthType.DXA},shading:o.fill?{fill:o.fill,type:ShadingType.CLEAR,color:'auto'}:undefined,margins:{top:30,bottom:30,left:80,right:80},children:[P(t,{bold:o.bold,color:o.color,size:18,align:o.align,after:0,font:o.font})]});
+  const W=[650,2050,3700,850,850,1050,850];
+  const cell=(t,i,o={})=>new TableCell({width:{size:W[i],type:WidthType.DXA},shading:o.fill?{fill:o.fill,type:ShadingType.CLEAR,color:'auto'}:undefined,margins:{top:45,bottom:45,left:85,right:85},children:[P(t,{bold:o.bold,color:o.color,size:18,align:o.align,after:0,font:o.font})]});
   const R=AlignmentType.RIGHT, C2=AlignmentType.CENTER;
-  const kids=[P('SIDDAGANGA INSTITUTE OF TECHNOLOGY, TUMAKURU',{bold:true,size:28,align:C2}),
-    P('Department of Electronics and Telecommunication Engineering',{size:21,align:C2,after:60}),
-    P('Consolidated List of Bright and Weak Learners',{bold:true,size:24,color:ACC,align:C2,after:80}),
-    P(desc,{size:18,align:C2,after:160})];
-  g.forEach(grp=>grp.subjects.forEach(sb=>{
-    kids.push(P(`${grp.ay}  ·  Semester ${grp.sem}  ·  ${subjTitle(sb)}`,{bold:true,size:22,color:ACC,before:200,after:20}));
-    kids.push(P(`${sb.faculty}  ·  ${sb.rows.length} student(s)`,{size:18,color:'5B6661',after:60}));
-    kids.push(new Table({width:{size:10000,type:WidthType.DXA},columnWidths:W,rows:[
-      new TableRow({tableHeader:true,children:['Sl','USN','Student Name','T1','Q1','Total','Category'].map((h,i)=>cell(h,i,{bold:true,color:'FFFFFF',fill:ACC,align:(i===0||(i>=3&&i<=5))?R:undefined}))})
-    ].concat(sb.rows.map((x,i)=>{ const f=x.category==='Bright'?'E3F2E7':x.category==='Weak'?'FBE9DF':undefined; const cc=x.category==='Bright'?GRN:x.category==='Weak'?ORG:undefined;
-      return new TableRow({children:[cell(i+1,0,{fill:f,align:R}),cell(x.usn,1,{fill:f,font:'Consolas'}),cell(x.name,2,{fill:f}),cell(mark(x.t1),3,{fill:f,align:R}),cell(mark(x.q1),4,{fill:f,align:R}),cell(x.total,5,{fill:f,align:R}),cell(x.category,6,{fill:f,bold:true,color:cc})]}); }))}));
-  }));
+  const totalStudents=g.reduce((n,grp)=>n+grp.subjects.reduce((m,sb)=>m+sb.rows.length,0),0);
+  const kids=[P('SIDDAGANGA INSTITUTE OF TECHNOLOGY, TUMAKURU',{bold:true,size:28,align:C2,after:40}),
+    P('Department of Electronics and Telecommunication Engineering',{size:21,align:C2,after:80}),
+    P('CONSOLIDATED LIST OF BRIGHT STUDENTS',{bold:true,size:26,color:ACC,align:C2,after:80}),
+    P(desc,{size:18,align:C2,after:40}),
+    P(`Total bright students: ${totalStudents}`,{bold:true,size:20,color:GRN,align:C2,after:160})];
+  g.forEach(grp=>{
+    kids.push(P(`ACADEMIC YEAR: ${grp.ay}   |   SEMESTER: ${grp.sem}`,{bold:true,size:23,color:ACC,before:220,after:80}));
+    grp.subjects.forEach(sb=>{
+      const title=`${sb.code||'Subject'}${sb.cname?' — '+sb.cname:''}${sb.sec?' · Section '+sb.sec:''}`;
+      kids.push(P(title,{bold:true,size:22,before:100,after:20}));
+      kids.push(P(`${sb.faculty||'Faculty not specified'}   |   ${sb.rows.length} bright student(s)`,{size:18,color:'5B6661',after:60}));
+      kids.push(new Table({width:{size:10000,type:WidthType.DXA},columnWidths:W,rows:[
+        new TableRow({tableHeader:true,children:['Sl. No.','USN','Student Name','T1','Q1','Total','Rank'].map((h,i)=>cell(h,i,{bold:true,color:'FFFFFF',fill:ACC,align:(i===0||(i>=3))?R:undefined}))})
+      ].concat(sb.rows.map((x,i)=>new TableRow({children:[
+        cell(i+1,0,{fill:'E3F2E7',align:R}),cell(x.usn,1,{fill:'E3F2E7',font:'Consolas'}),cell(x.name,2,{fill:'E3F2E7'}),
+        cell(mark(x.t1),3,{fill:'E3F2E7',align:R}),cell(mark(x.q1),4,{fill:'E3F2E7',align:R}),
+        cell(x.total,5,{fill:'E3F2E7',align:R,bold:true,color:GRN}),cell(x.rank??'',6,{fill:'E3F2E7',align:R})
+      ]})))}));
+    });
+  });
   return new Document({styles:{default:{document:{run:{font:'Calibri',size:20}}}},
     sections:[{properties:{page:{margin:{top:900,bottom:900,left:900,right:900}}},
       footers:{default:new Footer({children:[new Paragraph({alignment:R,children:[new TextRun({children:['Page ',PageNumber.CURRENT,' of ',PageNumber.TOTAL_PAGES],size:15,color:'5B6661'})]})]})},
@@ -902,9 +923,12 @@ $('c-pdf').onclick=async()=>{
   catch(e){ msg('c-dl','The PDF could not be made: '+((e&&(e.message||e.code))||'error'),'err'); }
 };
 $('c-docx').onclick=async()=>{
-  const g=cGuard(); if(!g) return;
+  const g=cBrightReportGroups();
+  const count=g.reduce((n,grp)=>n+grp.subjects.reduce((m,sb)=>m+sb.rows.length,0),0);
+  if(!count){msg('c-dl','No Bright students found for the selected academic year, semester and subject.','err');return;}
   if(!window.docx||!window.docx.Packer){ msg('c-dl','The Word builder did not load. Reload the page and try again.','err'); return; }
-  try{ const blob=await window.docx.Packer.toBlob(cDocx(g,cDesc())); await downloads.save({filename:cFileName('docx'),data:blob}); msg('c-dl','Word report saved.','ok'); }
+  const desc=`Academic year: ${$('c-ay').value||'All'}  |  Semester: ${$('c-sem').value||'All'}  |  Subject: ${$('c-code').value||'All'}  |  Category: Bright students only`;
+  try{ const blob=await window.docx.Packer.toBlob(cDocx(g,desc)); await downloads.save({filename:cBrightFileName(),data:blob}); msg('c-dl',`Bright-student Word report saved (${count} students).`,'ok'); }
   catch(e){ msg('c-dl','The Word file could not be made: '+((e&&(e.message||e.code))||'error'),'err'); }
 };
 /* ---------- end coordinator view ---------- */
